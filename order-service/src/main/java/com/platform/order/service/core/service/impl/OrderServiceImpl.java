@@ -8,13 +8,18 @@ import com.platform.order.service.core.repository.OrderRepository;
 import com.platform.order.service.core.service.OrderService;
 import com.platform.order.service.domain.Order;
 import com.platform.order.service.domain.request.CreateOrderRequest;
+import com.platform.order.service.domain.request.UpdateOrderRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Log4j2
 @Service
@@ -26,11 +31,24 @@ public class OrderServiceImpl implements OrderService {
 
     // add transactional process
     @Override
+    @Transactional(rollbackFor = {ResponseStatusException.class, Exception.class})
     public Order createOrderService(CreateOrderRequest createOrderRequest) {
         OrderEntity buildOrderEntity = transformOrderEntityRequest(createOrderRequest);
         OrderEntity orderEntity = orderRepository.saveAndFlush(buildOrderEntity);
         createOrderItemEntity(createOrderRequest, orderEntity.getOrderId());
         return transformOrderResult(orderEntity);
+    }
+
+    @Override
+    @Transactional(rollbackFor = {ResponseStatusException.class, Exception.class})
+    public Order updateOrderStatus(UpdateOrderRequest updateOrderRequest) {
+        Optional<OrderEntity> orderEntity = orderRepository.findById(updateOrderRequest.getOrderId());
+        if (orderEntity.isEmpty())
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order with orderId " + updateOrderRequest.getOrderId() + " not found.");
+
+        orderEntity.get().setOrderStatus(updateOrderRequest.getOrderStatus());
+        OrderEntity updateOrderEntity = orderRepository.saveAndFlush(orderEntity.get());
+        return transformOrderResult(updateOrderEntity);
     }
 
     private void createOrderItemEntity(CreateOrderRequest createOrderRequest, Integer orderId) {

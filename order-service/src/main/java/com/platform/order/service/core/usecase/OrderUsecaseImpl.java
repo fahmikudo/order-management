@@ -4,6 +4,7 @@ import com.platform.order.service.core.service.KafkaService;
 import com.platform.order.service.core.service.OrderService;
 import com.platform.order.service.domain.Order;
 import com.platform.order.service.domain.request.CreateOrderRequest;
+import com.platform.order.service.domain.request.UpdateOrderRequest;
 import com.platform.order.service.domain.response.CreateOrderResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -30,6 +31,16 @@ public class OrderUsecaseImpl implements OrderUsecase {
 
         // notify to email user for payment
         // emailService.publishEmailCustomer(email, order);
+
+        return transformCreateOrderResponse(order);
+    }
+
+    @Override
+    public CreateOrderResponse updateOrderUseCase(UpdateOrderRequest updateOrderRequest) {
+
+        Order order = orderService.updateOrderStatus(updateOrderRequest);
+
+        kafkaService.publishOrdersMessage("publish-order-id-0001201010", order);
 
         return transformCreateOrderResponse(order);
     }
